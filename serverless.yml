@@ -1,0 +1,47 @@
+service: stepfunctions-testing
+
+plugins:
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  region: ap-south-1
+  profile: default
+
+  iamRoleStatements:
+  - Effect: "Allow"
+    Action:
+      - "states:ListStateMachines"
+      - "states:StartExecution"
+    Resource: "arn:aws:states:*:*:*"
+
+functions:
+  executeStepFunction:
+    handler: handler.executeStepFunction
+    events:
+      - http:
+          path: run
+          method: get
+  calculateRandomNumber:
+    handler: handler.calculateRandomNumber
+  moreCalculations:
+    handler: handler.moreCalculations
+
+stepFunctions:
+  stateMachines:
+    testingStateMachine:
+      name: TestingStateMachine
+      definition:
+        Comment: "Example Step Function"
+        StartAt: calculateRandomNumber
+        States:
+          calculateRandomNumber:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-calculateRandomNumber
+            Next: moreCalculations
+          moreCalculations:
+            Type: Task
+            Resource: arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-moreCalculations
+            End: true
